@@ -10,19 +10,11 @@ carla_env:
 
 
 run_display:
-	./CarlaUE4.sh -windowed -carla-port=2000&
+	./CARLA_0.9.6/CarlaUE4.sh -windowed -carla-port=2000&
 
 run_non_display:
-	DISPLAY= ./CarlaUE4.sh -opengl -carla-port=2000&
+	DISPLAY= ./CARLA_0.9.6/CarlaUE4.sh -opengl -carla-port=2000&
 
 test:
-	python test.py
-
-
-
-
-
-
-
-
-
+	python gym-carla/test.py
+	
