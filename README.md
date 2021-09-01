@@ -1,10 +1,20 @@
 # autonomous_driving_CSCI_557
 
 ### Installation
-1. Setup CARLA environment
+1. Setup Python environment
 
 ```
-> make env
+> make python_env
+```
+
+2. Activate Python Environmrnt
+```
+> conda activate c557
+```
+
+3. Setup Carla Environment
+```
+> make carla_env
 ```
 	
 2. Start Carla Environment
