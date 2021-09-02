@@ -16,9 +16,9 @@ $ conda activate c557
 
 3. **Setup Carla Environment**
 
-This will install all required library, download CARLA 0.9.6, extract it and set relevant paths
+This will install all required library, download CARLA 0.9.6, extract it
 ```
-$ make carla_env
+$ export PYTHONPATH=$PYTHONPATH:$PWD/CARLA_0.9.6/PythonAPI/carla/dist/carla-0.9.6-py3.5-linux-x86_64.egg
 ```
 	
 ## Usage

@@ -43,10 +43,16 @@ def main():
   env = gym.make('carla-v0', params=params)
   obs = env.reset()
 
+  prev_a, prev_s = 2, 0
   while True:
-    action = [2.0, 0.0]
-    obs,r,done,info = env.step(action)
+    try: acc = prev_a = float(input("Value for acceleration [-3.0(brake), 3.0(accelerate)]"))
+    except: acc = prev_a
 
+    try: steer = prev_s = float(input("Value for steer [-0.3(right), 0.3(left)]"))
+    except: steer = prev_s
+
+    obs,r,done,info = env.step([acc, steer])
+    print(f"Action: {acc, steer} | Reward :{r}")
     if done:
       obs = env.reset()
 
