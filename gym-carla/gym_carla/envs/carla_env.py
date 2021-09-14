@@ -29,7 +29,8 @@ class CarlaEnv(gym.Env):
 
   def __init__(self, params):
     # parameters
-    self.display_size = params['display_size']  # rendering screen size
+    self.display_width = params['display_width']
+    self.display_height = params['display_height']
     self.max_past_step = params['max_past_step']
     self.number_of_vehicles = params['number_of_vehicles']
     self.number_of_walkers = params['number_of_walkers']
@@ -334,13 +335,13 @@ class CarlaEnv(gym.Env):
     """
     pygame.init()
     self.display = pygame.display.set_mode(
-    (self.display_size * 3, self.display_size),
+    (self.display_width*2, self.display_height),
     pygame.HWSURFACE | pygame.DOUBLEBUF)
 
-    pixels_per_meter = self.display_size / self.obs_range
+    pixels_per_meter = self.display_width / self.obs_range
     pixels_ahead_vehicle = (self.obs_range/2 - self.d_behind) * pixels_per_meter
     birdeye_params = {
-      'screen_size': [self.display_size, self.display_size],
+      'screen_size': [self.display_width, self.display_width],
       'pixels_per_meter': pixels_per_meter,
       'pixels_ahead_vehicle': pixels_ahead_vehicle
     }
@@ -467,7 +468,7 @@ class CarlaEnv(gym.Env):
       birdeye_render_types.append('waypoints')
     self.birdeye_render.render(self.display, birdeye_render_types)
     birdeye = pygame.surfarray.array3d(self.display)
-    birdeye = birdeye[0:self.display_size, :, :]
+    birdeye = birdeye[0:self.display_width, :, :]
     birdeye = display_to_rgb(birdeye, self.obs_size)
 
     # Roadmap
@@ -477,7 +478,7 @@ class CarlaEnv(gym.Env):
         roadmap_render_types.append('waypoints')
       self.birdeye_render.render(self.display, roadmap_render_types)
       roadmap = pygame.surfarray.array3d(self.display)
-      roadmap = roadmap[0:self.display_size, :, :]
+      roadmap = roadmap[0:self.display_width, :, :]
       roadmap = display_to_rgb(roadmap, self.obs_size)
       # Add ego vehicle
       for i in range(self.obs_size):
@@ -486,46 +487,46 @@ class CarlaEnv(gym.Env):
             roadmap[i, j, :] = birdeye[i, j, :]
 
     # Display birdeye image
-    birdeye_surface = rgb_to_display_surface(birdeye, self.display_size)
+    birdeye_surface = rgb_to_display_surface(birdeye, self.display_width, self.display_height)
     self.display.blit(birdeye_surface, (0, 0))
 
-    ## Lidar image generation
-    point_cloud = []
-    # Get point cloud data
-    for location in self.lidar_data:
-      point_cloud.append([location.x, location.y, -location.z])
-    point_cloud = np.array(point_cloud)
-    # Separate the 3D space to bins for point cloud, x and y is set according to self.lidar_bin,
-    # and z is set to be two bins.
-    y_bins = np.arange(-(self.obs_range - self.d_behind), self.d_behind+self.lidar_bin, self.lidar_bin)
-    x_bins = np.arange(-self.obs_range/2, self.obs_range/2+self.lidar_bin, self.lidar_bin)
-    z_bins = [-self.lidar_height-1, -self.lidar_height+0.25, 1]
-    # Get lidar image according to the bins
-    lidar, _ = np.histogramdd(point_cloud, bins=(x_bins, y_bins, z_bins))
-    lidar[:,:,0] = np.array(lidar[:,:,0]>0, dtype=np.uint8)
-    lidar[:,:,1] = np.array(lidar[:,:,1]>0, dtype=np.uint8)
-    # Add the waypoints to lidar image
-    if self.display_route:
-      wayptimg = (birdeye[:,:,0] <= 10) * (birdeye[:,:,1] <= 10) * (birdeye[:,:,2] >= 240)
-    else:
-      wayptimg = birdeye[:,:,0] < 0  # Equal to a zero matrix
-    wayptimg = np.expand_dims(wayptimg, axis=2)
-    wayptimg = np.fliplr(np.rot90(wayptimg, 3))
+    # ## Lidar image generation
+    # point_cloud = []
+    # # Get point cloud data
+    # for location in self.lidar_data:
+    #   point_cloud.append([location.x, location.y, -location.z])
+    # point_cloud = np.array(point_cloud)
+    # # Separate the 3D space to bins for point cloud, x and y is set according to self.lidar_bin,
+    # # and z is set to be two bins.
+    # y_bins = np.arange(-(self.obs_range - self.d_behind), self.d_behind+self.lidar_bin, self.lidar_bin)
+    # x_bins = np.arange(-self.obs_range/2, self.obs_range/2+self.lidar_bin, self.lidar_bin)
+    # z_bins = [-self.lidar_height-1, -self.lidar_height+0.25, 1]
+    # # Get lidar image according to the bins
+    # lidar, _ = np.histogramdd(point_cloud, bins=(x_bins, y_bins, z_bins))
+    # lidar[:,:,0] = np.array(lidar[:,:,0]>0, dtype=np.uint8)
+    # lidar[:,:,1] = np.array(lidar[:,:,1]>0, dtype=np.uint8)
+    # # Add the waypoints to lidar image
+    # if self.display_route:
+    #   wayptimg = (birdeye[:,:,0] <= 10) * (birdeye[:,:,1] <= 10) * (birdeye[:,:,2] >= 240)
+    # else:
+    #   wayptimg = birdeye[:,:,0] < 0  # Equal to a zero matrix
+    # wayptimg = np.expand_dims(wayptimg, axis=2)
+    # wayptimg = np.fliplr(np.rot90(wayptimg, 3))
 
-    # Get the final lidar image
-    lidar = np.concatenate((lidar, wayptimg), axis=2)
-    lidar = np.flip(lidar, axis=1)
-    lidar = np.rot90(lidar, 1)
-    lidar = lidar * 255
+    # # Get the final lidar image
+    # lidar = np.concatenate((lidar, wayptimg), axis=2)
+    # lidar = np.flip(lidar, axis=1)
+    # lidar = np.rot90(lidar, 1)
+    # lidar = lidar * 255
 
-    # Display lidar image
-    lidar_surface = rgb_to_display_surface(lidar, self.display_size)
-    self.display.blit(lidar_surface, (self.display_size, 0))
+    # # Display lidar image
+    # lidar_surface = rgb_to_display_surface(lidar, self.display_size)
+    # self.display.blit(lidar_surface, (self.display_size, 0))
 
     ## Display camera image
-    camera = resize(self.camera_img, (self.obs_size, self.obs_size)) * 255
-    camera_surface = rgb_to_display_surface(camera, self.display_size)
-    self.display.blit(camera_surface, (self.display_size * 2, 0))
+    camera = resize(self.camera_img, (self.display_width, self.display_width)) * 255
+    camera_surface = rgb_to_display_surface(camera, self.display_width, self.display_height)
+    self.display.blit(camera_surface, (self.display_width * 1, 0))
 
     # Display on pygame
     pygame.display.flip()
@@ -580,7 +581,7 @@ class CarlaEnv(gym.Env):
 
     obs = {
       'camera':camera.astype(np.uint8),
-      'lidar':lidar.astype(np.uint8),
+      #'lidar':lidar.astype(np.uint8),
       'birdeye':birdeye.astype(np.uint8),
       'state': state,
     }
