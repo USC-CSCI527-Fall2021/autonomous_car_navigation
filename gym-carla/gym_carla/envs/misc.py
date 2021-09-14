@@ -235,15 +235,15 @@ def display_to_rgb(display, obs_size):
   rgb = rgb * 255
   return rgb
 
-def rgb_to_display_surface(rgb, display_size):
+def rgb_to_display_surface(rgb, display_width, display_height):
   """
   Generate pygame surface given an rgb image uint8 matrix
   :param rgb: rgb image uint8 matrix
   :param display_size: display size
   :return: pygame surface
   """
-  surface = pygame.Surface((display_size, display_size)).convert()
-  display = skimage.transform.resize(rgb, (display_size, display_size))
+  surface = pygame.Surface((display_width, display_height)).convert()
+  display = skimage.transform.resize(rgb, (display_width, display_height))
   display = np.flip(display, axis=1)
   display = np.rot90(display, 1)
   pygame.surfarray.blit_array(surface, display)
