@@ -3,7 +3,7 @@
 ## Installation Steps
 1. **Setup Python environment.** 
 
-This will create a new python 3.6 environment named "c557".
+This will create a new python 3.6 environment named "c527".
 
 ```
 make python_env
@@ -11,7 +11,7 @@ make python_env
 
 2. **Activate Python Environmrnt**
 ```
-conda activate c557
+conda activate c527
 ```
 
 3. **Setup Carla Environment**

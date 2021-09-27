@@ -2,4 +2,4 @@ gym==0.12.5
 pygame==1.9.6
 scikit-image==0.16.2
 tensorflow==2.2
-opencv_python==4.5.3
+opencv_python
