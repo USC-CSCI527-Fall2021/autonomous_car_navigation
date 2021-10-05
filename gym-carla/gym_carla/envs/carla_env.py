@@ -86,7 +86,7 @@ class CarlaEnv(gym.Env):
 
     # Connect to carla server and get world object
     print('connecting to Carla server...')
-    client = carla.Client('localhost', params['port'])
+    client = carla.Client(params['address'], params['port'])
     client.set_timeout(10.0)
     self.world = client.load_world(params['town'])
     print('Carla server connected!')
