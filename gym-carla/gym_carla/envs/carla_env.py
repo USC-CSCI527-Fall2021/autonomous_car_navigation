@@ -201,10 +201,21 @@ class CarlaEnv(gym.Env):
         self.reset()
 
       if self.task_mode == 'random':
-        transform = random.choice(self.vehicle_spawn_points)
+        points = [ (45.889999, 203.259995, 1.370000, -89.999817),
+        (-3.680000, 119.190002, 1.370000, -89.999817),
+         (-3.680000, 123.190002, 1.370000, -89.999817),
+        (-7.530000, 290.220001, 1.370000, 89.999954),
+        (132.029999, 225.000000,1.370000, 89.999954 )]
+        selection = random.choice([points[1], points[2], points[3]])
+        transform = carla.Transform()
+        transform.location.x = selection[0]
+        transform.location.y = selection[1]
+        transform.location.z = selection[2]
+        transform.rotation.yaw = selection[3]
+        # transform = random.choice(self.vehicle_spawn_points)
+        # print(transform)
       if self.task_mode == 'roundabout':
-        self.start=[52.1+np.random.uniform(-5,5),-4.2, 178.66] # random
-        # self.start=[52.1,-4.2, 178.66] # static
+        self.start= [30.1,-4.2, 178.66] # static
         transform = set_carla_transform(self.start)
       if self._try_spawn_ego_vehicle_at(transform):
         break

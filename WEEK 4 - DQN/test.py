@@ -19,10 +19,11 @@ params = {
     'continuous_steer_range': [-0.2, 0.2],  # continuous steering angle range
     'ego_vehicle_filter': 'vehicle.lincoln*',  # filter for defining ego vehicle
     'port': 2000,  # connection port
-    'town': 'Town03',  # which town to simulate
-    'task_mode': 'roundabout',  # mode of the task, [random, roundabout (only for Town03)]
-    'max_time_episode': 1000,  # maximum timesteps per episode
+    'town': 'Town02',  # which town to simulate
+    'task_mode': 'random',  # mode of the task, [random, roundabout (only for Town03)]
+    'max_time_episode': 2000,  # maximum timesteps per episode
     'max_waypt': 12,  # maximum number of waypoints
+    'address': 'localhost',
     'obs_range': 32,  # observation range (meter)
     'lidar_bin': 0.125,  # bin size of lidar sensor (meter)
     'd_behind': 12,  # distance behind the ego vehicle (meter)
