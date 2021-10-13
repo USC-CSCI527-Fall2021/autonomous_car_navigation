@@ -411,8 +411,8 @@ class BirdeyeRender(object):
 
     self.original_surface_size = min(self.params['screen_size'][0], self.params['screen_size'][1])
     self.surface_size = self.map_image.big_map_surface.get_width()
+    #print(self.surface_size, self.map_image.surface.get_width(), self.original_surface_size) #2353, 2353, 250
 
-    print( self.surface_size, self.map_image.surface.get_width() )
     # Render Actors
     self.actors_surface = pygame.Surface((self.map_image.surface.get_width(), self.map_image.surface.get_height()))
     self.actors_surface.set_colorkey(COLOR_BLACK)
@@ -492,8 +492,7 @@ class BirdeyeRender(object):
             color = pygame.Color(math.floor(color_value*255), 255, math.floor(color_value*255))
           elif  actor_type == 'walker':
             # yellow
-            color = pygame.Color(255, 255, math.floor(color_value*255))
-          
+            color = pygame.Color(255, 255, math.floor(color_value*255))           
         pygame.draw.polygon(surface, color, corners)
 
   def render_waypoints(self, surface, waypoints, world_to_pixel):
@@ -510,6 +509,7 @@ class BirdeyeRender(object):
     pygame.draw.lines(surface, color, False, corners, 20)
 
   def render_actors(self, surface, vehicles, walkers):
+    #print(self.map_image.world_to_pixel)
     self._render_hist_actors(surface, vehicles, 'vehicle', self.map_image.world_to_pixel, 10)
     self._render_hist_actors(surface, walkers, 'walker', self.map_image.world_to_pixel, 10)
 
@@ -556,6 +556,7 @@ class BirdeyeRender(object):
 
     angle = 0.0 if self.hero_actor is None else self.hero_transform.rotation.yaw + 90.0
 
+    #print(self.hero_surface.get_width())
     center_offset = (0, 0)
     if self.hero_actor is not None:
 
@@ -563,7 +564,7 @@ class BirdeyeRender(object):
       hero_front = self.hero_transform.get_forward_vector()
       translation_offset = (
         hero_location_screen[0] -
-        self.hero_surface.get_width() /
+        self.hero_surface.get_width() / #403
         2 +
         hero_front.x *
         self.params['pixels_ahead_vehicle'],
@@ -587,22 +588,23 @@ class BirdeyeRender(object):
       self.hero_surface.blit(self.result_surface, (-translation_offset[0],
                              -translation_offset[1]))
 
+
       rotated_result_surface = pygame.transform.rotozoom(self.hero_surface, angle, 1.0).convert()
-
-      center = (display.get_height() / 2, display.get_height() / 2)
+      #print(display.get_height(), self.hero_surface.get_height()) #250, 403
+      center = (self.params['screen_size'][0] / 2, self.params['screen_size'][0] / 2)
+      rotated_result_surface = pygame.transform.scale(rotated_result_surface, (self.params['screen_size'][0], self.params['screen_size'][1]))
       rotation_pivot = rotated_result_surface.get_rect(center=center)
+      #print(rotated_result_surface.get_height(), rotated_result_surface.get_width())
+      #rotated_result_surface = rotated_result_surface.subsurface( (  ) )
       display.blit(rotated_result_surface, rotation_pivot)
-
     else:
       # Translation offset
       translation_offset = (0, 0)
-      center_offset = (abs(display.get_height() - self.surface_size) / 2 * scale_factor, 0)
+      center_offset = (abs(self.params['screen_size'][0] - self.surface_size) / 2 * scale_factor, 0)
 
       # Apply clipping rect
       clipping_rect = pygame.Rect(-translation_offset[0] - center_offset[0], -translation_offset[1],
                     self.params['screen_size'][0], self.params['screen_size'][1])
       self.clip_surfaces(clipping_rect)
       Util.blits(self.result_surface, surfaces)
-
-      display.blit(self.result_surface, (translation_offset[0] + center_offset[0],
-                         translation_offset[1]))
+      display.blit(self.result_surface, (translation_offset[0] + center_offset[0], translation_offset[1]))

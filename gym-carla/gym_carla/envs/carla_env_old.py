@@ -19,25 +19,22 @@ from gym import spaces
 from gym.utils import seeding
 import carla
 
-from gym_carla.envs.render_new import BirdeyeRender
+from gym_carla.envs.render_old import BirdeyeRender
 from gym_carla.envs.route_planner import RoutePlanner
 from gym_carla.envs.misc import *
 
-VIEW_WIDTH = 1920//2
-VIEW_HEIGHT = 1080//2
-VIEW_FOV = 90
 
 class CarlaEnv(gym.Env):
   """An OpenAI gym wrapper for CARLA simulator."""
 
   def __init__(self, params):
     # parameters
-    self.display_size = params['display_size']
+    self.display_width = params['display_width']
+    self.display_height = params['display_height']
     self.max_past_step = params['max_past_step']
     self.number_of_vehicles = params['number_of_vehicles']
     self.number_of_walkers = params['number_of_walkers']
     self.dt = params['dt']
-    self.display_main = params['display_main']
     self.task_mode = params['task_mode']
     self.max_time_episode = params['max_time_episode']
     self.max_waypt = params['max_waypt']
@@ -124,31 +121,15 @@ class CarlaEnv(gym.Env):
     self.lidar_bp.set_attribute('range', '5000')
 
     # Camera sensor
-    
     self.camera_img = np.zeros((self.obs_size, self.obs_size, 3), dtype=np.uint8)
     self.camera_trans = carla.Transform(carla.Location(x=0.8, z=1.7))
     self.camera_bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
     # Modify the attributes of the blueprint to set image resolution and field of view.
-    if self.display_main:
-      self.camera_img_main = np.zeros((VIEW_WIDTH, VIEW_HEIGHT, 3), dtype=np.uint8)
-      self.camera_trans_main = carla.Transform(carla.Location(x=-5.5, z=2.8), carla.Rotation(pitch=-15))
-      self.camera_bp_main = self.world.get_blueprint_library().find('sensor.camera.rgb')
-      
-
-
     self.camera_bp.set_attribute('image_size_x', str(self.obs_size))
     self.camera_bp.set_attribute('image_size_y', str(self.obs_size))
     self.camera_bp.set_attribute('fov', '110')
     # Set the time in seconds between sensor captures
     self.camera_bp.set_attribute('sensor_tick', '0.02')
-
-    if self.display_main:
-      self.camera_bp_main.set_attribute('image_size_x', str(VIEW_WIDTH))
-      self.camera_bp_main.set_attribute('image_size_y', str(VIEW_HEIGHT))
-      self.camera_bp_main.set_attribute('fov', str(VIEW_FOV))
-      # Set the time in seconds between sensor captures
-      self.camera_bp_main.set_attribute('sensor_tick', '0.02')
-
 
     # Set fixed simulation step for synchronous mode
     self.settings = self.world.get_settings()
@@ -225,7 +206,7 @@ class CarlaEnv(gym.Env):
          (-3.680000, 123.190002, 1.370000, -89.999817),
         (-7.530000, 290.220001, 1.370000, 89.999954),
         (132.029999, 225.000000,1.370000, 89.999954 )]
-        selection = random.choice(points)
+        selection = random.choice([points[1], points[2], points[3]])
         transform = carla.Transform()
         transform.location.x = selection[0]
         transform.location.y = selection[1]
@@ -260,31 +241,14 @@ class CarlaEnv(gym.Env):
       self.lidar_data = data
 
     # Add camera sensor
+    self.camera_sensor = self.world.spawn_actor(self.camera_bp, self.camera_trans, attach_to=self.ego)
+    self.camera_sensor.listen(lambda data: get_camera_img(data))
     def get_camera_img(data):
       array = np.frombuffer(data.raw_data, dtype = np.dtype("uint8"))
       array = np.reshape(array, (data.height, data.width, 4))
       array = array[:, :, :3]
       array = array[:, :, ::-1]
       self.camera_img = array
-
-    self.camera_sensor = self.world.spawn_actor(self.camera_bp, self.camera_trans, attach_to=self.ego)
-    self.camera_sensor.listen(lambda data: get_camera_img(data))
-
-    def get_camera_img_main(data):
-      array = np.frombuffer(data.raw_data, dtype = np.dtype("uint8"))
-      array = np.reshape(array, (data.height, data.width, 4))
-      array = array[:, :, :3]
-      array = array[:, :, ::-1]
-      self.camera_img_main = array
-
-    if self.display_main:
-      self.camera_sensor_main = self.world.spawn_actor(self.camera_bp_main, self.camera_trans_main, attach_to=self.ego)
-      self.camera_sensor_main.listen(lambda data: get_camera_img_main(data))
-      calibration = np.identity(3)
-      calibration[0, 2] = VIEW_WIDTH / 2.0
-      calibration[1, 2] = VIEW_HEIGHT / 2.0
-      calibration[0, 0] = calibration[1, 1] = VIEW_WIDTH / (2.0 * np.tan(VIEW_FOV * np.pi / 360.0))
-      self.camera_sensor_main.calibration = calibration
 
     # Update timesteps
     self.time_step=0
@@ -381,19 +345,14 @@ class CarlaEnv(gym.Env):
     """Initialize the birdeye view renderer.
     """
     pygame.init()
-    if self.display_main:
-      self.display = pygame.display.set_mode(
-      (self.display_size*6, self.display_size*4),
-      pygame.HWSURFACE | pygame.DOUBLEBUF)
-    else:
-      self.display = pygame.display.set_mode(
-      (self.display_size, self.display_size*3),
-      pygame.HWSURFACE | pygame.DOUBLEBUF)
+    self.display = pygame.display.set_mode(
+    (self.display_width*2, self.display_height),
+    pygame.HWSURFACE | pygame.DOUBLEBUF)
 
-    pixels_per_meter = self.display_size / self.obs_range
+    pixels_per_meter = self.display_width / self.obs_range
     pixels_ahead_vehicle = (self.obs_range/2 - self.d_behind) * pixels_per_meter
     birdeye_params = {
-      'screen_size': [self.display_size, self.display_size],
+      'screen_size': [self.display_width, self.display_width],
       'pixels_per_meter': pixels_per_meter,
       'pixels_ahead_vehicle': pixels_ahead_vehicle
     }
@@ -514,65 +473,71 @@ class CarlaEnv(gym.Env):
     self.birdeye_render.walker_polygons = self.walker_polygons
     self.birdeye_render.waypoints = self.waypoints
 
-    #birdeye view with roadmap and actors
+    # birdeye view with roadmap and actors
     birdeye_render_types = ['roadmap', 'actors']
     if self.display_route:
       birdeye_render_types.append('waypoints')
     self.birdeye_render.render(self.display, birdeye_render_types)
     birdeye = pygame.surfarray.array3d(self.display)
-    birdeye = birdeye[0:self.display_size, 0:self.display_size, :] #change#####
-    birdeye = display_to_rgb(birdeye, self.display_size)
-    birdeye = resize(birdeye[50:200, 50:200, :], (self.display_size, self.display_size))
+    birdeye = birdeye[0:self.display_width, :, :]
+    birdeye = display_to_rgb(birdeye, self.obs_size)
 
-    #print(birdeye.shape)
+    # Roadmap
+    if self.pixor:
+      roadmap_render_types = ['roadmap']
+      if self.display_route:
+        roadmap_render_types.append('waypoints')
+      self.birdeye_render.render(self.display, roadmap_render_types)
+      roadmap = pygame.surfarray.array3d(self.display)
+      roadmap = roadmap[0:self.display_width, :, :]
+      roadmap = display_to_rgb(roadmap, self.obs_size)
+      # Add ego vehicle
+      for i in range(self.obs_size):
+        for j in range(self.obs_size):
+          if abs(birdeye[i, j, 0] - 255)<20 and abs(birdeye[i, j, 1] - 0)<20 and abs(birdeye[i, j, 0] - 255)<20:
+            roadmap[i, j, :] = birdeye[i, j, :]
+
     # Display birdeye image
-    #birdeye = resize(birdeye, (self.display_size, self.display_size)) * 255
-    #birdeye_surface = rgb_to_display_surface(birdeye, self.display_size, self.display_size)
-    #self.display.blit(birdeye_surface, (0, 0))
+    birdeye_surface = rgb_to_display_surface(birdeye, self.display_width, self.display_height)
+    self.display.blit(birdeye_surface, (0, 0))
 
-    # Lidar image generation
-    point_cloud = []
-    # Get point cloud data
-    for location in self.lidar_data:
-      point_cloud.append([location.x, location.y, -location.z])
-    point_cloud = np.array(point_cloud)
-    # Separate the 3D space to bins for point cloud, x and y is set according to self.lidar_bin,
-    # and z is set to be two bins.
-    y_bins = np.arange(-(self.obs_range - self.d_behind), self.d_behind+self.lidar_bin, self.lidar_bin)
-    x_bins = np.arange(-self.obs_range/2, self.obs_range/2+self.lidar_bin, self.lidar_bin)
-    z_bins = [-self.lidar_height-1, -self.lidar_height+0.25, 1]
-    # Get lidar image according to the bins
-    lidar, _ = np.histogramdd(point_cloud, bins=(x_bins, y_bins, z_bins))
-    lidar[:,:,0] = np.array(lidar[:,:,0]>0, dtype=np.uint8)
-    lidar[:,:,1] = np.array(lidar[:,:,1]>0, dtype=np.uint8)
-    # Add the waypoints to lidar image
-    if self.display_route:
-      wayptimg = (birdeye[:,:,0] <= 10) * (birdeye[:,:,1] <= 10) * (birdeye[:,:,2] >= 240)
-    else:
-      wayptimg = birdeye[:,:,0] < 0  # Equal to a zero matrix
-    wayptimg = np.expand_dims(wayptimg, axis=2)
-    wayptimg = np.fliplr(np.rot90(wayptimg, 3))
+    # ## Lidar image generation
+    # point_cloud = []
+    # # Get point cloud data
+    # for location in self.lidar_data:
+    #   point_cloud.append([location.x, location.y, -location.z])
+    # point_cloud = np.array(point_cloud)
+    # # Separate the 3D space to bins for point cloud, x and y is set according to self.lidar_bin,
+    # # and z is set to be two bins.
+    # y_bins = np.arange(-(self.obs_range - self.d_behind), self.d_behind+self.lidar_bin, self.lidar_bin)
+    # x_bins = np.arange(-self.obs_range/2, self.obs_range/2+self.lidar_bin, self.lidar_bin)
+    # z_bins = [-self.lidar_height-1, -self.lidar_height+0.25, 1]
+    # # Get lidar image according to the bins
+    # lidar, _ = np.histogramdd(point_cloud, bins=(x_bins, y_bins, z_bins))
+    # lidar[:,:,0] = np.array(lidar[:,:,0]>0, dtype=np.uint8)
+    # lidar[:,:,1] = np.array(lidar[:,:,1]>0, dtype=np.uint8)
+    # # Add the waypoints to lidar image
+    # if self.display_route:
+    #   wayptimg = (birdeye[:,:,0] <= 10) * (birdeye[:,:,1] <= 10) * (birdeye[:,:,2] >= 240)
+    # else:
+    #   wayptimg = birdeye[:,:,0] < 0  # Equal to a zero matrix
+    # wayptimg = np.expand_dims(wayptimg, axis=2)
+    # wayptimg = np.fliplr(np.rot90(wayptimg, 3))
 
-    
-    lidar = resize(lidar, (self.display_size, self.display_size))
-    lidar = np.concatenate((lidar, wayptimg), axis=2)
-    lidar = np.flip(lidar, axis=1)
-    lidar = np.rot90(lidar, 1)
-    lidar = lidar * 255
+    # # Get the final lidar image
+    # lidar = np.concatenate((lidar, wayptimg), axis=2)
+    # lidar = np.flip(lidar, axis=1)
+    # lidar = np.rot90(lidar, 1)
+    # lidar = lidar * 255
 
-    #Display lidar image
-    lidar_surface = rgb_to_display_surface(lidar, self.display_size, self.display_size)
-    self.display.blit(lidar_surface, (0, self.display_size))
+    # # Display lidar image
+    # lidar_surface = rgb_to_display_surface(lidar, self.display_size)
+    # self.display.blit(lidar_surface, (self.display_size, 0))
 
     ## Display camera image
-    camera = resize(self.camera_img, (self.display_size, self.display_size)) * 255
-    camera_surface = rgb_to_display_surface(camera, self.display_size, self.display_size)
-    self.display.blit(camera_surface, (0, 2*self.display_size))
-
-    if self.display_main:
-      camera_main = resize( self.camera_img_main, (5*self.display_size, 5*self.display_size) )*255
-      camera_surface_main = rgb_to_display_surface(camera_main, 5*self.display_size, 5*self.display_size)
-      self.display.blit(camera_surface_main, (self.display_size, 0) )
+    camera = resize(self.camera_img, (self.display_width, self.display_width)) * 255
+    camera_surface = rgb_to_display_surface(camera, self.display_width, self.display_height)
+    self.display.blit(camera_surface, (self.display_width * 1, 0))
 
     # Display on pygame
     pygame.display.flip()
@@ -623,17 +588,22 @@ class CarlaEnv(gym.Env):
       vh_regr = np.flip(vh_regr, axis=0)
 
       # Pixor state, [x, y, cos(yaw), sin(yaw), speed]
-      #print(birdeye.shape)
-    # Display birdeye image
-    #birdeye = resize(birdeye, (self.display_size, self.display_size)) * 255
-    #pixor_state = [ego_x, ego_y, np.cos(ego_yaw), np.sin(ego_yaw), speed]
+      pixor_state = [ego_x, ego_y, np.cos(ego_yaw), np.sin(ego_yaw), speed]
 
     obs = {
-      #'camera':camera.astype(np.uint8),
+      'camera':camera.astype(np.uint8),
       #'lidar':lidar.astype(np.uint8),
       'birdeye':birdeye.astype(np.uint8),
       'state': state,
     }
+
+    if self.pixor:
+      obs.update({
+        'roadmap':roadmap.astype(np.uint8),
+        'vh_clas':np.expand_dims(vh_clas, -1).astype(np.float32),
+        'vh_regr':vh_regr.astype(np.float32),
+        'pixor_state': pixor_state,
+      })
 
     return obs
 
