@@ -95,7 +95,25 @@ class CarlaEnv(gym.Env):
     print('Carla server connected!')
 
     # Set weather
-    self.world.set_weather(carla.WeatherParameters.ClearNoon)
+    weather = {
+      "Default": carla.WeatherParameters.Default,
+      "ClearNoon": carla.WeatherParameters.ClearNoon,
+      "CloudyNoon": carla.WeatherParameters.CloudyNoon,
+      "WetNoon": carla.WeatherParameters.WetNoon,
+      "WetCloudyNoon": carla.WeatherParameters.WetCloudyNoon,
+      "MidRainyNoon": carla.WeatherParameters.MidRainyNoon,
+      "HardRainNoon" :carla.WeatherParameters.HardRainNoon,
+      "SoftRainNoon" : carla.WeatherParameters.SoftRainNoon,
+      "ClearSunset": carla.WeatherParameters.ClearSunset,
+      "CloudySunset": carla.WeatherParameters.CloudySunset,
+      "WetSunset": carla.WeatherParameters.WetSunset,
+      "WetCloudySunset": carla.WeatherParameters.WetCloudySunset,
+      "MidRainSunset": carla.WeatherParameters.MidRainSunset,
+      "HardRainSunset": carla.WeatherParameters.HardRainSunset,
+      "SoftRainSunset": carla.WeatherParameters.SoftRainSunset
+    }
+    self.world.set_weather(weather.get(params.get("weather","Default"),0))
+    #self.word
 
     # Get spawn points
     self.vehicle_spawn_points = list(self.world.get_map().get_spawn_points())
@@ -115,33 +133,33 @@ class CarlaEnv(gym.Env):
     self.collision_hist_l = 1 # collision history length
     self.collision_bp = self.world.get_blueprint_library().find('sensor.other.collision')
 
-    # Lidar sensor
-    self.lidar_data = None
-    self.lidar_height = 2.1
-    self.lidar_trans = carla.Transform(carla.Location(x=0.0, z=self.lidar_height))
-    self.lidar_bp = self.world.get_blueprint_library().find('sensor.lidar.ray_cast')
-    self.lidar_bp.set_attribute('channels', '32')
-    self.lidar_bp.set_attribute('range', '5000')
+    # # Lidar sensor
+    # self.lidar_data = None
+    # self.lidar_height = 2.1
+    # self.lidar_trans = carla.Transform(carla.Location(x=0.0, z=self.lidar_height))
+    # self.lidar_bp = self.world.get_blueprint_library().find('sensor.lidar.ray_cast')
+    # self.lidar_bp.set_attribute('channels', '32')
+    # self.lidar_bp.set_attribute('range', '5000')
 
     # Camera sensor
-    
+    """
     self.camera_img = np.zeros((self.obs_size, self.obs_size, 3), dtype=np.uint8)
     self.camera_trans = carla.Transform(carla.Location(x=0.8, z=1.7))
     self.camera_bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
     # Modify the attributes of the blueprint to set image resolution and field of view.
+    """
     if self.display_main:
       self.camera_img_main = np.zeros((VIEW_WIDTH, VIEW_HEIGHT, 3), dtype=np.uint8)
       self.camera_trans_main = carla.Transform(carla.Location(x=-5.5, z=2.8), carla.Rotation(pitch=-15))
       self.camera_bp_main = self.world.get_blueprint_library().find('sensor.camera.rgb')
       
-
-
+    """
     self.camera_bp.set_attribute('image_size_x', str(self.obs_size))
     self.camera_bp.set_attribute('image_size_y', str(self.obs_size))
     self.camera_bp.set_attribute('fov', '110')
     # Set the time in seconds between sensor captures
     self.camera_bp.set_attribute('sensor_tick', '0.02')
-
+    """
     if self.display_main:
       self.camera_bp_main.set_attribute('image_size_x', str(VIEW_WIDTH))
       self.camera_bp_main.set_attribute('image_size_y', str(VIEW_HEIGHT))
@@ -253,13 +271,14 @@ class CarlaEnv(gym.Env):
         self.collision_hist.pop(0)
     self.collision_hist = []
 
-    # Add lidar sensor
-    self.lidar_sensor = self.world.spawn_actor(self.lidar_bp, self.lidar_trans, attach_to=self.ego)
-    self.lidar_sensor.listen(lambda data: get_lidar_data(data))
-    def get_lidar_data(data):
-      self.lidar_data = data
+    # # Add lidar sensor
+    # self.lidar_sensor = self.world.spawn_actor(self.lidar_bp, self.lidar_trans, attach_to=self.ego)
+    # self.lidar_sensor.listen(lambda data: get_lidar_data(data))
+    # def get_lidar_data(data):
+    #   self.lidar_data = data
 
     # Add camera sensor
+    """
     def get_camera_img(data):
       array = np.frombuffer(data.raw_data, dtype = np.dtype("uint8"))
       array = np.reshape(array, (data.height, data.width, 4))
@@ -269,7 +288,7 @@ class CarlaEnv(gym.Env):
 
     self.camera_sensor = self.world.spawn_actor(self.camera_bp, self.camera_trans, attach_to=self.ego)
     self.camera_sensor.listen(lambda data: get_camera_img(data))
-
+    """
     def get_camera_img_main(data):
       array = np.frombuffer(data.raw_data, dtype = np.dtype("uint8"))
       array = np.reshape(array, (data.height, data.width, 4))
@@ -383,11 +402,11 @@ class CarlaEnv(gym.Env):
     pygame.init()
     if self.display_main:
       self.display = pygame.display.set_mode(
-      (self.display_size*6, self.display_size*4),
+      (self.display_size*4, self.display_size*3),
       pygame.HWSURFACE | pygame.DOUBLEBUF)
     else:
       self.display = pygame.display.set_mode(
-      (self.display_size, self.display_size*3),
+      (self.display_size, self.display_size),
       pygame.HWSURFACE | pygame.DOUBLEBUF)
 
     pixels_per_meter = self.display_size / self.obs_range
@@ -531,96 +550,97 @@ class CarlaEnv(gym.Env):
     #self.display.blit(birdeye_surface, (0, 0))
 
     # Lidar image generation
-    point_cloud = []
-    # Get point cloud data
-    for location in self.lidar_data:
-      point_cloud.append([location.x, location.y, -location.z])
-    point_cloud = np.array(point_cloud)
-    # Separate the 3D space to bins for point cloud, x and y is set according to self.lidar_bin,
+    # point_cloud = []
+    # # Get point cloud data
+    # for location in self.lidar_data:
+    #   point_cloud.append([location.x, location.y, -location.z])
+    # point_cloud = np.array(point_cloud)
+    # # Separate the 3D space to bins for point cloud, x and y is set according to self.lidar_bin,
     # and z is set to be two bins.
-    y_bins = np.arange(-(self.obs_range - self.d_behind), self.d_behind+self.lidar_bin, self.lidar_bin)
-    x_bins = np.arange(-self.obs_range/2, self.obs_range/2+self.lidar_bin, self.lidar_bin)
-    z_bins = [-self.lidar_height-1, -self.lidar_height+0.25, 1]
-    # Get lidar image according to the bins
-    lidar, _ = np.histogramdd(point_cloud, bins=(x_bins, y_bins, z_bins))
-    lidar[:,:,0] = np.array(lidar[:,:,0]>0, dtype=np.uint8)
-    lidar[:,:,1] = np.array(lidar[:,:,1]>0, dtype=np.uint8)
-    # Add the waypoints to lidar image
-    if self.display_route:
-      wayptimg = (birdeye[:,:,0] <= 10) * (birdeye[:,:,1] <= 10) * (birdeye[:,:,2] >= 240)
-    else:
-      wayptimg = birdeye[:,:,0] < 0  # Equal to a zero matrix
-    wayptimg = np.expand_dims(wayptimg, axis=2)
-    wayptimg = np.fliplr(np.rot90(wayptimg, 3))
+    # y_bins = np.arange(-(self.obs_range - self.d_behind), self.d_behind+self.lidar_bin, self.lidar_bin)
+    # x_bins = np.arange(-self.obs_range/2, self.obs_range/2+self.lidar_bin, self.lidar_bin)
+    # z_bins = [-self.lidar_height-1, -self.lidar_height+0.25, 1]
+    # # Get lidar image according to the bins
+    # lidar, _ = np.histogramdd(point_cloud, bins=(x_bins, y_bins, z_bins))
+    # lidar[:,:,0] = np.array(lidar[:,:,0]>0, dtype=np.uint8)
+    # lidar[:,:,1] = np.array(lidar[:,:,1]>0, dtype=np.uint8)
+    # # Add the waypoints to lidar image
+    # if self.display_route:
+    #   wayptimg = (birdeye[:,:,0] <= 10) * (birdeye[:,:,1] <= 10) * (birdeye[:,:,2] >= 240)
+    # else:
+    #   wayptimg = birdeye[:,:,0] < 0  # Equal to a zero matrix
+    # wayptimg = np.expand_dims(wayptimg, axis=2)
+    # wayptimg = np.fliplr(np.rot90(wayptimg, 3))
 
     
-    lidar = resize(lidar, (self.display_size, self.display_size))
-    lidar = np.concatenate((lidar, wayptimg), axis=2)
-    lidar = np.flip(lidar, axis=1)
-    lidar = np.rot90(lidar, 1)
-    lidar = lidar * 255
+    # lidar = resize(lidar, (self.display_size, self.display_size))
+    # lidar = np.concatenate((lidar, wayptimg), axis=2)
+    # lidar = np.flip(lidar, axis=1)
+    # lidar = np.rot90(lidar, 1)
+    # lidar = lidar * 255
 
-    #Display lidar image
-    lidar_surface = rgb_to_display_surface(lidar, self.display_size, self.display_size)
-    self.display.blit(lidar_surface, (0, self.display_size))
+    # #Display lidar image
+    # lidar_surface = rgb_to_display_surface(lidar, self.display_size, self.display_size)
+    # self.display.blit(lidar_surface, (0, self.display_size))
 
     ## Display camera image
+    """
     camera = resize(self.camera_img, (self.display_size, self.display_size)) * 255
     camera_surface = rgb_to_display_surface(camera, self.display_size, self.display_size)
-    self.display.blit(camera_surface, (0, 2*self.display_size))
-
+    self.display.blit(camera_surface, (0, 1*self.display_size))
+    """
     if self.display_main:
-      camera_main = resize( self.camera_img_main, (5*self.display_size, 5*self.display_size) )*255
-      camera_surface_main = rgb_to_display_surface(camera_main, 5*self.display_size, 5*self.display_size)
+      camera_main = resize( self.camera_img_main, (3*self.display_size, 3*self.display_size) )*255
+      camera_surface_main = rgb_to_display_surface(camera_main, 3*self.display_size, 3*self.display_size)
       self.display.blit(camera_surface_main, (self.display_size, 0) )
 
     # Display on pygame
     pygame.display.flip()
 
-    # State observation
-    ego_trans = self.ego.get_transform()
-    ego_x = ego_trans.location.x
-    ego_y = ego_trans.location.y
-    ego_yaw = ego_trans.rotation.yaw/180*np.pi
-    lateral_dis, w = get_preview_lane_dis(self.waypoints, ego_x, ego_y)
-    delta_yaw = np.arcsin(np.cross(w, 
-      np.array(np.array([np.cos(ego_yaw), np.sin(ego_yaw)]))))
-    v = self.ego.get_velocity()
-    speed = np.sqrt(v.x**2 + v.y**2)
-    state = np.array([lateral_dis, - delta_yaw, speed, self.vehicle_front])
+    # # State observation
+    # ego_trans = self.ego.get_transform()
+    # ego_x = ego_trans.location.x
+    # ego_y = ego_trans.location.y
+    # ego_yaw = ego_trans.rotation.yaw/180*np.pi
+    # lateral_dis, w = get_preview_lane_dis(self.waypoints, ego_x, ego_y)
+    # delta_yaw = np.arcsin(np.cross(w, 
+    #   np.array(np.array([np.cos(ego_yaw), np.sin(ego_yaw)]))))
+    # v = self.ego.get_velocity()
+    # speed = np.sqrt(v.x**2 + v.y**2)
+    # state = np.array([lateral_dis, - delta_yaw, speed, self.vehicle_front])
 
-    if self.pixor:
-      ## Vehicle classification and regression maps (requires further normalization)
-      vh_clas = np.zeros((self.pixor_size, self.pixor_size))
-      vh_regr = np.zeros((self.pixor_size, self.pixor_size, 6))
+    # if self.pixor:
+    #   ## Vehicle classification and regression maps (requires further normalization)
+    #   vh_clas = np.zeros((self.pixor_size, self.pixor_size))
+    #   vh_regr = np.zeros((self.pixor_size, self.pixor_size, 6))
 
-      # Generate the PIXOR image. Note in CARLA it is using left-hand coordinate
-      # Get the 6-dim geom parametrization in PIXOR, here we use pixel coordinate
-      for actor in self.world.get_actors().filter('vehicle.*'):
-        x, y, yaw, l, w = get_info(actor)
-        x_local, y_local, yaw_local = get_local_pose((x, y, yaw), (ego_x, ego_y, ego_yaw))
-        if actor.id != self.ego.id:
-          if abs(y_local)<self.obs_range/2+1 and x_local<self.obs_range-self.d_behind+1 and x_local>-self.d_behind-1:
-            x_pixel, y_pixel, yaw_pixel, l_pixel, w_pixel = get_pixel_info(
-              local_info=(x_local, y_local, yaw_local, l, w),
-              d_behind=self.d_behind, obs_range=self.obs_range, image_size=self.pixor_size)
-            cos_t = np.cos(yaw_pixel)
-            sin_t = np.sin(yaw_pixel)
-            logw = np.log(w_pixel)
-            logl = np.log(l_pixel)
-            pixels = get_pixels_inside_vehicle(
-              pixel_info=(x_pixel, y_pixel, yaw_pixel, l_pixel, w_pixel),
-              pixel_grid=self.pixel_grid)
-            for pixel in pixels:
-              vh_clas[pixel[0], pixel[1]] = 1
-              dx = x_pixel - pixel[0]
-              dy = y_pixel - pixel[1]
-              vh_regr[pixel[0], pixel[1], :] = np.array(
-                [cos_t, sin_t, dx, dy, logw, logl])
+    #   # Generate the PIXOR image. Note in CARLA it is using left-hand coordinate
+    #   # Get the 6-dim geom parametrization in PIXOR, here we use pixel coordinate
+    #   for actor in self.world.get_actors().filter('vehicle.*'):
+    #     x, y, yaw, l, w = get_info(actor)
+    #     x_local, y_local, yaw_local = get_local_pose((x, y, yaw), (ego_x, ego_y, ego_yaw))
+    #     if actor.id != self.ego.id:
+    #       if abs(y_local)<self.obs_range/2+1 and x_local<self.obs_range-self.d_behind+1 and x_local>-self.d_behind-1:
+    #         x_pixel, y_pixel, yaw_pixel, l_pixel, w_pixel = get_pixel_info(
+    #           local_info=(x_local, y_local, yaw_local, l, w),
+    #           d_behind=self.d_behind, obs_range=self.obs_range, image_size=self.pixor_size)
+    #         cos_t = np.cos(yaw_pixel)
+    #         sin_t = np.sin(yaw_pixel)
+    #         logw = np.log(w_pixel)
+    #         logl = np.log(l_pixel)
+    #         pixels = get_pixels_inside_vehicle(
+    #           pixel_info=(x_pixel, y_pixel, yaw_pixel, l_pixel, w_pixel),
+    #           pixel_grid=self.pixel_grid)
+    #         for pixel in pixels:
+    #           vh_clas[pixel[0], pixel[1]] = 1
+    #           dx = x_pixel - pixel[0]
+    #           dy = y_pixel - pixel[1]
+    #           vh_regr[pixel[0], pixel[1], :] = np.array(
+    #             [cos_t, sin_t, dx, dy, logw, logl])
 
-      # Flip the image matrix so that the origin is at the left-bottom
-      vh_clas = np.flip(vh_clas, axis=0)
-      vh_regr = np.flip(vh_regr, axis=0)
+    #   # Flip the image matrix so that the origin is at the left-bottom
+    #   vh_clas = np.flip(vh_clas, axis=0)
+    #   vh_regr = np.flip(vh_regr, axis=0)
 
       # Pixor state, [x, y, cos(yaw), sin(yaw), speed]
       #print(birdeye.shape)
@@ -632,7 +652,7 @@ class CarlaEnv(gym.Env):
       #'camera':camera.astype(np.uint8),
       #'lidar':lidar.astype(np.uint8),
       'birdeye':birdeye.astype(np.uint8),
-      'state': state,
+      #'state': state,
     }
 
     return obs
