@@ -133,33 +133,11 @@ class CarlaEnv(gym.Env):
     self.collision_hist_l = 1 # collision history length
     self.collision_bp = self.world.get_blueprint_library().find('sensor.other.collision')
 
-    # # Lidar sensor
-    # self.lidar_data = None
-    # self.lidar_height = 2.1
-    # self.lidar_trans = carla.Transform(carla.Location(x=0.0, z=self.lidar_height))
-    # self.lidar_bp = self.world.get_blueprint_library().find('sensor.lidar.ray_cast')
-    # self.lidar_bp.set_attribute('channels', '32')
-    # self.lidar_bp.set_attribute('range', '5000')
-
-    # Camera sensor
-    """
-    self.camera_img = np.zeros((self.obs_size, self.obs_size, 3), dtype=np.uint8)
-    self.camera_trans = carla.Transform(carla.Location(x=0.8, z=1.7))
-    self.camera_bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
-    # Modify the attributes of the blueprint to set image resolution and field of view.
-    """
     if self.display_main:
       self.camera_img_main = np.zeros((VIEW_WIDTH, VIEW_HEIGHT, 3), dtype=np.uint8)
       self.camera_trans_main = carla.Transform(carla.Location(x=-5.5, z=2.8), carla.Rotation(pitch=-15))
       self.camera_bp_main = self.world.get_blueprint_library().find('sensor.camera.rgb')
-      
-    """
-    self.camera_bp.set_attribute('image_size_x', str(self.obs_size))
-    self.camera_bp.set_attribute('image_size_y', str(self.obs_size))
-    self.camera_bp.set_attribute('fov', '110')
-    # Set the time in seconds between sensor captures
-    self.camera_bp.set_attribute('sensor_tick', '0.02')
-    """
+
     if self.display_main:
       self.camera_bp_main.set_attribute('image_size_x', str(VIEW_WIDTH))
       self.camera_bp_main.set_attribute('image_size_y', str(VIEW_HEIGHT))
@@ -238,22 +216,24 @@ class CarlaEnv(gym.Env):
         self.reset()
 
       if self.task_mode == 'random':
-        points = [ (45.889999, 203.259995, 1.370000, -89.999817),
-        (-3.680000, 119.190002, 1.370000, -89.999817),
-         (-3.680000, 123.190002, 1.370000, -89.999817),
+        points = [ #(45.889999, 203.259995, 1.370000, -89.999817),
+        #(-3.680000, 119.190002, 1.370000, -89.999817),
+         #(-3.680000, 123.190002, 1.370000, -89.999817),
         (-7.530000, 290.220001, 1.370000, 89.999954),
-        (132.029999, 225.000000,1.370000, 89.999954 )]
+        #- (132.029999, 225.000000,1.370000, 89.999954 )
+        ]
         selection = random.choice(points)
         transform = carla.Transform()
         transform.location.x = selection[0]
         transform.location.y = selection[1]
         transform.location.z = selection[2]
         transform.rotation.yaw = selection[3]
-        # transform = random.choice(self.vehicle_spawn_points)
-        # print(transform)
+
       if self.task_mode == 'roundabout':
-        self.start= [30.1,-4.2, 178.66] # static
+        self.start= [35.1,-4.2, 178.66] # static
+        #self.start=[52.1+np.random.uniform(-5,5),-4.2, 178.66] # random
         transform = set_carla_transform(self.start)
+    
       if self._try_spawn_ego_vehicle_at(transform):
         break
       else:
