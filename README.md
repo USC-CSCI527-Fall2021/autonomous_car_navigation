@@ -51,7 +51,7 @@ make test
 1. DQN & DDQN - [Week 4 - DQN](WEEK%204%20-%20DQN)
 2. VAE training - [vae/VAE_training.ipynb](vae/VAE_training.ipynb)
 3. PPO with VAE - [Midterm - PPO final/ppo_vae.py](Midterm%20-%20PPO%20final/ppo_vae.py) 
-4. PPO with Cropped Image View - [Midterm - PPO final/ppo_vae.py](Midterm%20-%20PPO%20final/ppo_no_vae)
+4. PPO with Cropped Image View - [Midterm - PPO final/ppo_vae.py](Midterm%20-%20PPO%20final/ppo_no_vae.py)
 5. Imitation Learning - [Classifier/classifier_carla_2.ipynb](Classifier/classifier_carla_2.ipynb)
 6. PPO using baseline imitation learning - [PPO-immitation/ppo-imitation-only-steer.ipynb](PPO-immitation/ppo-imitation-only-steer.ipynb)
 
