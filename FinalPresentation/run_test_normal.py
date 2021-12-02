@@ -10,8 +10,8 @@ import argparse
 import tensorflow as tf
 
 params = {
-	'number_of_vehicles': 50,
-	'number_of_walkers': 50,
+	'number_of_vehicles': 25,
+	'number_of_walkers': 20,
 	'display_size': 250,  # screen size of bird-eye render
 	'display_height' : 512,
 	'display_main': True,
@@ -63,12 +63,13 @@ if __name__ == "__main__":
 	env = gym.make('carla-v0', params=params)
 
 	observation =  env.reset()
-	for _ in range(20): observation, _, _, _ = env.step([2.5,0])
+	for _ in range(30): observation, _, _, _ = env.step([2.5,0])
 	done = False
 	cumulative_reward = 0
 	step = 1
 	dq = deque([1]*20, maxlen=15)
 	amplifier = lambda x: (1 + -1*x)*1.75 + 1.25
+	input("Press any key to continue!")
 	while not done:
 		obs = read_transform(observation['birdeye']).reshape( (1, 128,128,3) )
 		action_ud = np.argmax(acc_model.predict(obs)) 

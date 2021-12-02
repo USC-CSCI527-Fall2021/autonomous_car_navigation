@@ -26,7 +26,8 @@ from gym_carla.envs.misc import *
 VIEW_WIDTH = 1920//2
 VIEW_HEIGHT = 1080//2
 VIEW_FOV = 90
-
+# random.seed(seed)
+# np.random.seed(seed)
 class CarlaEnv(gym.Env):
   """An OpenAI gym wrapper for CARLA simulator."""
 
@@ -175,7 +176,6 @@ class CarlaEnv(gym.Env):
     # Disable sync mode
     self._set_synchronous_mode(False)
 
-    # Spawn surrounding vehicles
     random.shuffle(self.vehicle_spawn_points)
     count = self.number_of_vehicles
     if count > 0:
@@ -219,8 +219,9 @@ class CarlaEnv(gym.Env):
         points = [ #(45.889999, 203.259995, 1.370000, -89.999817),
         #(-3.680000, 119.190002, 1.370000, -89.999817),
          #(-3.680000, 123.190002, 1.370000, -89.999817),
+        #- (132.029999, 225.000000,1.370000, 89.999954 ),
         (-7.530000, 290.220001, 1.370000, 89.999954),
-        #- (132.029999, 225.000000,1.370000, 89.999954 )
+        
         ]
         selection = random.choice(points)
         transform = carla.Transform()
@@ -228,7 +229,7 @@ class CarlaEnv(gym.Env):
         transform.location.y = selection[1]
         transform.location.z = selection[2]
         transform.rotation.yaw = selection[3]
-
+        
       if self.task_mode == 'roundabout':
         self.start= [35.1,-4.2, 178.66] # static
         #self.start=[52.1+np.random.uniform(-5,5),-4.2, 178.66] # random
@@ -642,7 +643,7 @@ class CarlaEnv(gym.Env):
     # reward for speed tracking
     v = self.ego.get_velocity()
     speed = np.sqrt(v.x**2 + v.y**2)
-    r_speed = -abs(speed - self.desired_speed)
+    #r_speed = -abs(speed - self.desired_speed)
     
     # reward for collision
     r_collision = 0
@@ -665,8 +666,8 @@ class CarlaEnv(gym.Env):
 
     # cost for too fast
     r_fast = 0
-    if lspeed_lon > self.desired_speed:
-      r_fast = -1
+    # if lspeed_lon > self.desired_speed:
+    #   r_fast = -1
 
     # cost for lateral acceleration
     r_lat = - abs(self.ego.get_control().steer) * lspeed_lon**2
